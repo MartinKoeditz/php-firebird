@@ -1,15 +1,15 @@
 --TEST--
-InterBase: binding (may take a while)
+Firebird: binding (may take a while)
 --SKIPIF--
 <?php include("skipif.inc"); ?>
 --FILE--
 <?php
 
-	require("interbase.inc");
+	require("firebird.inc");
 
-	ibase_connect($test_base);
+	fbird_connect($test_base);
 
-	ibase_query(
+	fbird_query(
 		"create table test6 (
 			iter		integer,
 			v_char		char(1000),
@@ -22,17 +22,17 @@ InterBase: binding (may take a while)
 			v_smallint  smallint,
 			v_varchar   varchar(10000)
 			)");
-	ibase_query(
+	fbird_query(
 		"create procedure add1 (arg integer)
 		returns (result integer)
 		as 
 		begin
 			result = arg +1;
 		end");
-	ibase_commit();
+	fbird_commit();
 
 	/* if timefmt not supported, hide error */
-	ini_set('ibase.timestampformat',"%m/%d/%Y %H:%M:%S");
+	ini_set('fbird.timestampformat',"%m/%d/%Y %H:%M:%S");
 
 	echo "insert\n";
 
@@ -48,15 +48,15 @@ InterBase: binding (may take a while)
 		$v_smallint = rand_number(5) % 32767;
 		$v_varchar = rand_str(10000);
 
-		ibase_query("insert into test6
+		fbird_query("insert into test6
 			(iter,v_char,v_date,v_decimal,v_double,v_float,
 			v_integer,v_numeric,v_smallint,v_varchar)
 			values (?,?,?,?,?,?,?,?,?,?)",
 			$iter, $v_char, $v_date, $v_decimal, $v_double, $v_float,
 			$v_integer, $v_numeric, $v_smallint, $v_varchar);
-		$sel = ibase_query("select * from test6 where iter = ?", $iter);
+		$sel = fbird_query("select * from test6 where iter = ?", $iter);
 
-		$row = ibase_fetch_object($sel);
+		$row = fbird_fetch_object($sel);
 		if(substr($row->V_CHAR,0,strlen($v_char)) != $v_char) {
 			echo " CHAR fail:\n";
 			echo " in:  $v_char\n";
@@ -102,7 +102,7 @@ InterBase: binding (may take a while)
 			echo " in:  $v_varchar\n";
 			echo " out: $row->V_VARCHAR\n";
 		}
-		ibase_free_result($sel);
+		fbird_free_result($sel);
 	}/* for($iter)*/
 
 	echo "select\n";
@@ -119,116 +119,116 @@ InterBase: binding (may take a while)
 		$v_varchar = rand_str(10000);
 
 		/* clear table*/
-		ibase_query("delete from test6");
+		fbird_query("delete from test6");
 
 		/* make one record */
-		ibase_query("insert into test6
+		fbird_query("insert into test6
 			(iter, v_char,v_date,v_decimal,
 			v_integer,v_numeric,v_smallint,v_varchar)
 			values (666, '$v_char',?,$v_decimal, $v_integer,
 			$v_numeric, $v_smallint, '$v_varchar')",$v_date);
 
 		/* test all types */
-		if(!($sel = ibase_query(
+		if(!($sel = fbird_query(
 			"select iter from test6 where v_char = ?", $v_char)) ||
-			!ibase_fetch_row($sel)) {
+			!fbird_fetch_row($sel)) {
 			echo "CHAR fail\n";
 		}
-		ibase_free_result($sel);
-		if(!($sel = ibase_query(
+		fbird_free_result($sel);
+		if(!($sel = fbird_query(
 			"select iter from test6 where v_date = ?", $v_date)) ||
-			!ibase_fetch_row($sel)) {
+			!fbird_fetch_row($sel)) {
 			echo "DATE fail\n";
 		}
-		ibase_free_result($sel);
-		if(!($sel = ibase_query(
+		fbird_free_result($sel);
+		if(!($sel = fbird_query(
 			"select iter from test6 where v_decimal = ?", $v_decimal)) ||
-			!ibase_fetch_row($sel)) {
+			!fbird_fetch_row($sel)) {
 			echo "DECIMAL fail\n";
 		}
-		ibase_free_result($sel);
-		if(!($sel = ibase_query(
+		fbird_free_result($sel);
+		if(!($sel = fbird_query(
 			"select iter from test6 where v_integer = ?", $v_integer)) ||
-			!ibase_fetch_row($sel)) {
+			!fbird_fetch_row($sel)) {
 			echo "INTEGER fail\n";
 		}
-		ibase_free_result($sel);
-		if(!($sel = ibase_query(
+		fbird_free_result($sel);
+		if(!($sel = fbird_query(
 			"select iter from test6 where v_numeric = ?", $v_numeric)) ||
-			!ibase_fetch_row($sel)) {
+			!fbird_fetch_row($sel)) {
 			echo "NUMERIC fail\n";
 		}
-		ibase_free_result($sel);
-		if(!($sel = ibase_query(
+		fbird_free_result($sel);
+		if(!($sel = fbird_query(
 			"select iter from test6 where v_smallint = ?", $v_smallint)) ||
-			!ibase_fetch_row($sel)) {
+			!fbird_fetch_row($sel)) {
 			echo "SMALLINT fail\n";
 		}
-		ibase_free_result($sel);
-		if(!($sel = ibase_query(
+		fbird_free_result($sel);
+		if(!($sel = fbird_query(
 			"select iter from test6 where v_varchar = ?", $v_varchar)) ||
-			!ibase_fetch_row($sel)) {
+			!fbird_fetch_row($sel)) {
 			echo "VARCHAR fail\n";
 		}
-		ibase_free_result($sel);
+		fbird_free_result($sel);
 
 	} /*for iter*/
 
 	echo "prepare and exec insert\n";
 
     /* prepare table */
-	ibase_query("delete from test6");
+	fbird_query("delete from test6");
 
 	/* prepare query */
-	$query = ibase_prepare(
+	$query = fbird_prepare(
 		"insert into test6 (v_integer) values (?)");
 
 	for($i = 0; $i < 10; $i++) {
-		ibase_execute($query, $i);
+		fbird_execute($query, $i);
 	}
 
 	out_table("test6");
 
-	ibase_free_query($query);
+	fbird_free_query($query);
 
 	echo "prepare and exec select\n";
 
 	/* prepare query */
-	$query = ibase_prepare("select * from test6
+	$query = fbird_prepare("select * from test6
 		where v_integer between ? and ?");
 
 	$low_border = 2;
 	$high_border = 6;
 
-	$res = ibase_execute($query, $low_border, $high_border);
+	$res = fbird_execute($query, $low_border, $high_border);
 	out_result($res, "test6");
-	ibase_free_result($res);
+	fbird_free_result($res);
 
 	$low_border = 0;
 	$high_border = 4;
-	$res = ibase_execute($query, $low_border, $high_border);
+	$res = fbird_execute($query, $low_border, $high_border);
 	out_result($res, "test6");
-	ibase_free_result($res);
+	fbird_free_result($res);
 
-	$res = ibase_execute($query, "5", 7.499);
+	$res = fbird_execute($query, "5", 7.499);
 	out_result($res, "test6");
-	ibase_free_result($res);
+	fbird_free_result($res);
 
-	ibase_free_query($query);
+	fbird_free_query($query);
 
 	/* test execute procedure */
-	$query = ibase_prepare("execute procedure add1(?)");
+	$query = fbird_prepare("execute procedure add1(?)");
 	$res = array();
 	for ($i = 0; $i < 10; $i++) {
-		$res[] = ibase_execute($query,$i);
+		$res[] = fbird_execute($query,$i);
 	}
-	ibase_free_query($query);
+	fbird_free_query($query);
 	foreach ($res as $r) {
 		out_result($r, "proc add1");
-		ibase_free_result($r);
+		fbird_free_result($r);
 	}
 
-	ibase_close();
+	fbird_close();
 	echo "end of test\n";
 ?>
 --EXPECT--

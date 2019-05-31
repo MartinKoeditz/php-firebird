@@ -1,19 +1,19 @@
 --TEST--
-InterBase: BLOB test
+Firebird: BLOB test
 --SKIPIF--
 <?php include("skipif.inc"); ?>
 --FILE--
 <?php
 
-    require("interbase.inc");
+    require("firebird.inc");
 
-    $link = ibase_connect($test_base);
+    $link = fbird_connect($test_base);
 
-    ibase_query(
+    fbird_query(
     	"CREATE TABLE test4 (
     		v_integer   integer,
             v_blob		blob)");
-    ibase_commit();
+    fbird_commit();
 
     /* create 100k blob file  */
     $blob_str = rand_binstr(100*1024);
@@ -25,101 +25,101 @@ InterBase: BLOB test
 
     echo "import blob 1\n";
     $ftmp = fopen($name,"r");
-    $bl_s = ibase_blob_import($ftmp);
-    ibase_query("INSERT INTO test4 (v_integer, v_blob) VALUES (1, ?)", $bl_s);
+    $bl_s = fbird_blob_import($ftmp);
+    fbird_query("INSERT INTO test4 (v_integer, v_blob) VALUES (1, ?)", $bl_s);
 
-    $bl_s = ibase_blob_import($link,$ftmp);
-    ibase_query($link, "INSERT INTO test4 (v_integer, v_blob) VALUES (1, ?)", $bl_s);
+    $bl_s = fbird_blob_import($link,$ftmp);
+    fbird_query($link, "INSERT INTO test4 (v_integer, v_blob) VALUES (1, ?)", $bl_s);
     fclose($ftmp);
 
     echo "test blob 1\n";
-    $q = ibase_query("SELECT v_blob FROM test4 WHERE v_integer = 1");
+    $q = fbird_query("SELECT v_blob FROM test4 WHERE v_integer = 1");
 
-    $row = ibase_fetch_object($q);
-    $bl_h = ibase_blob_open($row->V_BLOB);
+    $row = fbird_fetch_object($q);
+    $bl_h = fbird_blob_open($row->V_BLOB);
 
 	$blob = '';
-    while($piece = ibase_blob_get($bl_h, 1 + rand() % 1024))
+    while($piece = fbird_blob_get($bl_h, 1 + rand() % 1024))
         $blob .= $piece;
     if($blob != $blob_str)
 		echo " BLOB 1 fail (1)\n";
-    ibase_blob_close($bl_h);
+    fbird_blob_close($bl_h);
 
-    $bl_h = ibase_blob_open($link,$row->V_BLOB);
+    $bl_h = fbird_blob_open($link,$row->V_BLOB);
 
 	$blob = '';
-    while($piece = ibase_blob_get($bl_h, 100 * 1024))
+    while($piece = fbird_blob_get($bl_h, 100 * 1024))
         $blob .= $piece;
     if($blob != $blob_str)
 		echo " BLOB 1 fail (2)\n";
-    ibase_blob_close($bl_h);
-    ibase_free_result($q);
+    fbird_blob_close($bl_h);
+    fbird_free_result($q);
     unset($blob);
 
     echo "create blob 2\n";
 
-    ibase_query("INSERT INTO test4 (v_integer, v_blob) VALUES (2, ?)", $blob_str);
+    fbird_query("INSERT INTO test4 (v_integer, v_blob) VALUES (2, ?)", $blob_str);
 
     echo "test blob 2\n";
 
-    $q = ibase_query("SELECT v_blob FROM test4 WHERE v_integer = 2");
-    $row = ibase_fetch_object($q,IBASE_TEXT);
+    $q = fbird_query("SELECT v_blob FROM test4 WHERE v_integer = 2");
+    $row = fbird_fetch_object($q,FBIRD_TEXT);
 
     if($row->V_BLOB != $blob_str)
 		echo " BLOB 2 fail\n";
-    ibase_free_result($q);
+    fbird_free_result($q);
     unset($blob);
 
 
     echo "create blob 3\n";
 
-    $bl_h = ibase_blob_create($link);
+    $bl_h = fbird_blob_create($link);
 
-    ibase_blob_add($bl_h, "+----------------------------------------------------------------------+\n");
-    ibase_blob_add($bl_h, "| PHP HTML Embedded Scripting Language Version 3.0                     |\n");
-    ibase_blob_add($bl_h, "+----------------------------------------------------------------------+\n");
-    ibase_blob_add($bl_h, "| Copyright (c) 1997-2000 PHP Development Team (See Credits file)      |\n");
-    ibase_blob_add($bl_h, "+----------------------------------------------------------------------+\n");
-    ibase_blob_add($bl_h, "| This program is free software; you can redistribute it and/or modify |\n");
-    ibase_blob_add($bl_h, "| it under the terms of one of the following licenses:                 |\n");
-    ibase_blob_add($bl_h, "|                                                                      |\n");
-    ibase_blob_add($bl_h, "|  A) the GNU General Public License as published by the Free Software |\n");
-    ibase_blob_add($bl_h, "|     Foundation; either version 2 of the License, or (at your option) |\n");
-    ibase_blob_add($bl_h, "|     any later version.                                               |\n");
-    ibase_blob_add($bl_h, "|                                                                      |\n");
-    ibase_blob_add($bl_h, "|  B) the PHP License as published by the PHP Development Team and     |\n");
-    ibase_blob_add($bl_h, "|     included in the distribution in the file: LICENSE                |\n");
-    ibase_blob_add($bl_h, "|                                                                      |\n");
-    ibase_blob_add($bl_h, "| This program is distributed in the hope that it will be useful,      |\n");
-    ibase_blob_add($bl_h, "| but WITHOUT ANY WARRANTY; without even the implied warranty of       |\n");
-    ibase_blob_add($bl_h, "| MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the        |\n");
-    ibase_blob_add($bl_h, "| GNU General Public License for more details.                         |\n");
-    ibase_blob_add($bl_h, "|                                                                      |\n");
-    ibase_blob_add($bl_h, "| You should have received a copy of both licenses referred to here.   |\n");
-    ibase_blob_add($bl_h, "| If you did not, or have any questions about PHP licensing, please    |\n");
-    ibase_blob_add($bl_h, "| contact core@php.net.                                                |\n");
-    ibase_blob_add($bl_h, "+----------------------------------------------------------------------+\n");
-    $bl_s = ibase_blob_close($bl_h);
-    ibase_query("INSERT INTO test4 (v_integer, v_blob) VALUES (3, ?)", $bl_s);
-	ibase_commit();
+    fbird_blob_add($bl_h, "+----------------------------------------------------------------------+\n");
+    fbird_blob_add($bl_h, "| PHP HTML Embedded Scripting Language Version 3.0                     |\n");
+    fbird_blob_add($bl_h, "+----------------------------------------------------------------------+\n");
+    fbird_blob_add($bl_h, "| Copyright (c) 1997-2000 PHP Development Team (See Credits file)      |\n");
+    fbird_blob_add($bl_h, "+----------------------------------------------------------------------+\n");
+    fbird_blob_add($bl_h, "| This program is free software; you can redistribute it and/or modify |\n");
+    fbird_blob_add($bl_h, "| it under the terms of one of the following licenses:                 |\n");
+    fbird_blob_add($bl_h, "|                                                                      |\n");
+    fbird_blob_add($bl_h, "|  A) the GNU General Public License as published by the Free Software |\n");
+    fbird_blob_add($bl_h, "|     Foundation; either version 2 of the License, or (at your option) |\n");
+    fbird_blob_add($bl_h, "|     any later version.                                               |\n");
+    fbird_blob_add($bl_h, "|                                                                      |\n");
+    fbird_blob_add($bl_h, "|  B) the PHP License as published by the PHP Development Team and     |\n");
+    fbird_blob_add($bl_h, "|     included in the distribution in the file: LICENSE                |\n");
+    fbird_blob_add($bl_h, "|                                                                      |\n");
+    fbird_blob_add($bl_h, "| This program is distributed in the hope that it will be useful,      |\n");
+    fbird_blob_add($bl_h, "| but WITHOUT ANY WARRANTY; without even the implied warranty of       |\n");
+    fbird_blob_add($bl_h, "| MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the        |\n");
+    fbird_blob_add($bl_h, "| GNU General Public License for more details.                         |\n");
+    fbird_blob_add($bl_h, "|                                                                      |\n");
+    fbird_blob_add($bl_h, "| You should have received a copy of both licenses referred to here.   |\n");
+    fbird_blob_add($bl_h, "| If you did not, or have any questions about PHP licensing, please    |\n");
+    fbird_blob_add($bl_h, "| contact core@php.net.                                                |\n");
+    fbird_blob_add($bl_h, "+----------------------------------------------------------------------+\n");
+    $bl_s = fbird_blob_close($bl_h);
+    fbird_query("INSERT INTO test4 (v_integer, v_blob) VALUES (3, ?)", $bl_s);
+	fbird_commit();
     echo "echo blob 3\n";
 
-    $q = ibase_query("SELECT v_blob FROM test4 WHERE v_integer = 3");
-    $row = ibase_fetch_object($q);
-	ibase_commit();
-	ibase_close();
+    $q = fbird_query("SELECT v_blob FROM test4 WHERE v_integer = 3");
+    $row = fbird_fetch_object($q);
+	fbird_commit();
+	fbird_close();
 
-    $link = ibase_connect($test_base);
-    ibase_blob_echo($link, $row->V_BLOB);
-    ibase_free_result($q);
+    $link = fbird_connect($test_base);
+    fbird_blob_echo($link, $row->V_BLOB);
+    fbird_free_result($q);
 
     echo "fetch blob 3\n";
-    $q = ibase_query("SELECT v_blob FROM test4 WHERE v_integer = 3");
-    $row = ibase_fetch_object($q,IBASE_TEXT);
+    $q = fbird_query("SELECT v_blob FROM test4 WHERE v_integer = 3");
+    $row = fbird_fetch_object($q,FBIRD_TEXT);
     echo $row->V_BLOB;
-    ibase_free_result($q);
+    fbird_free_result($q);
 
-    ibase_close();
+    fbird_close();
     unlink($name);
     echo "end of test\n";
 ?>

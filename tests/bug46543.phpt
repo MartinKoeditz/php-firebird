@@ -1,28 +1,28 @@
 --TEST--
-Bug #46543 (ibase_trans() memory leaks when using wrong parameters)
+Bug #46543 (fbird_trans() memory leaks when using wrong parameters)
 --SKIPIF--
 <?php include("skipif.inc"); ?>
 --FILE--
 <?php
 
-require("interbase.inc");
+require("firebird.inc");
 
-@ibase_close();
+@fbird_close();
 
-ibase_trans(1);
-ibase_trans();
-ibase_trans('foo');
-ibase_trans(fopen(__FILE__, 'r'));
+fbird_trans(1);
+fbird_trans();
+fbird_trans('foo');
+fbird_trans(fopen(__FILE__, 'r'));
 
-$x = ibase_connect($test_base);
-ibase_trans(1, 2, $x, $x, 3);
+$x = fbird_connect($test_base);
+fbird_trans(1, 2, $x, $x, 3);
 
 ?>
 --EXPECTF--
-Warning: ibase_trans(): supplied resource is not a valid Firebird/InterBase link resource in %sbug46543.php on line %d
+Warning: fbird_trans(): supplied resource is not a valid Firebird/Firebird link resource in %sbug46543.php on line %d
 
-Warning: ibase_trans(): supplied resource is not a valid Firebird/InterBase link resource in %sbug46543.php on line %d
+Warning: fbird_trans(): supplied resource is not a valid Firebird/Firebird link resource in %sbug46543.php on line %d
 
-Warning: ibase_trans(): supplied resource is not a valid Firebird/InterBase link resource in %sbug46543.php on line %d
+Warning: fbird_trans(): supplied resource is not a valid Firebird/Firebird link resource in %sbug46543.php on line %d
 
-Warning: ibase_trans(): supplied resource is not a valid Firebird/InterBase link resource in %sbug46543.php on line %d
+Warning: fbird_trans(): supplied resource is not a valid Firebird/Firebird link resource in %sbug46543.php on line %d

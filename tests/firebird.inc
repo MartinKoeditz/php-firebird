@@ -4,33 +4,33 @@ srand((double)microtime()*1000000);
 
 $user = 'SYSDBA';
 $password = 'masterkey';
-ini_set('ibase.default_user',$user);
-ini_set('ibase.default_password',$password);
+ini_set('fbird.default_user',$user);
+ini_set('fbird.default_password',$password);
 
 /* we need just the generated name, not the file itself */
-unlink($test_base = tempnam(sys_get_temp_dir(),"php_ibase_test"));
+unlink($test_base = tempnam(sys_get_temp_dir(),"php_fbird_test"));
 
 function init_db()
 {
 	global $test_base, $user, $password;
 
-	$test_db = ibase_query(IBASE_CREATE,
+	$test_db = fbird_query(FBIRD_CREATE,
 		sprintf("CREATE SCHEMA '%s' USER '%s' PASSWORD '%s' DEFAULT CHARACTER SET %s",$test_base,
-		$user, $password, ($charset = ini_get('ibase.default_charset')) ? $charset : 'NONE'));
-	$tr = ibase_trans($test_db);
-	ibase_query($tr,"create table test1 (i integer, c varchar(100))");
-	ibase_commit_ret($tr);
-	ibase_query($tr,"insert into test1(i, c) values(1, 'test table not created with isql')");
-	ibase_commit($tr);
-	ibase_close($test_db);
+		$user, $password, ($charset = ini_get('fbird.default_charset')) ? $charset : 'NONE'));
+	$tr = fbird_trans($test_db);
+	fbird_query($tr,"create table test1 (i integer, c varchar(100))");
+	fbird_commit_ret($tr);
+	fbird_query($tr,"insert into test1(i, c) values(1, 'test table not created with isql')");
+	fbird_commit($tr);
+	fbird_close($test_db);
 }
 
 function cleanup_db()
 {
 	global $test_base;
 
-	$r = ibase_connect($test_base);
-	ibase_drop_db($r);
+	$r = fbird_connect($test_base);
+	fbird_drop_db($r);
 }
 
 register_shutdown_function('cleanup_db');
@@ -39,18 +39,18 @@ init_db();
 function out_table($table_name)
 {
 	echo "--- $table_name ---\n";
-	$res = ibase_query("select * from $table_name");
-	while ($r = ibase_fetch_row($res)) {
+	$res = fbird_query("select * from $table_name");
+	while ($r = fbird_fetch_row($res)) {
 		echo join("\t",$r)."\t\n";
 	}
-	ibase_free_result($res);
+	fbird_free_result($res);
 	echo "---\n";
 }
 
 function out_result($result, $table_name = "")
 {
 	echo "--- $table_name ---\n";
-	while ($r = ibase_fetch_row($result)) {
+	while ($r = fbird_fetch_row($result)) {
 		echo join("\t",$r)."\t\n";
 	}
 	echo "---\n";
@@ -59,10 +59,10 @@ function out_result($result, $table_name = "")
 function out_result_trap_error($result, $table_name = "")
 {
    echo "--- $table_name ---\n";
-   while ($r = @ibase_fetch_row($result)) {
+   while ($r = @fbird_fetch_row($result)) {
 		echo join("\t",$r)."\t\n";
    }
-   echo "errmsg [" . ibase_errmsg() . "]\n";
+   echo "errmsg [" . fbird_errmsg() . "]\n";
    echo "---\n";
 }
 

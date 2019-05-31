@@ -1,14 +1,14 @@
 --TEST--
-InterBase: misc sql types (may take a while)
+Firebird: misc sql types (may take a while)
 --SKIPIF--
 <?php include("skipif.inc"); ?>
 --FILE--
 <?php
 
-    require("interbase.inc");
-    ibase_connect($test_base);
+    require("firebird.inc");
+    fbird_connect($test_base);
 
-    ibase_query(
+    fbird_query(
     	"create table test3 (
             iter		integer not null,
             v_char		char(1000),
@@ -25,13 +25,13 @@ InterBase: misc sql types (may take a while)
             v_smallint  smallint,
             v_varchar   varchar(10000)
             )");
-    ibase_commit();
+    fbird_commit();
 
 	/* should fail, but gracefully */
-	@ibase_query("insert into test3 (iter) values (?)", null);
+	@fbird_query("insert into test3 (iter) values (?)", null);
 
     /* if timefmt is not supported, suppress error here */
-    ini_set('ibase.timestampformat',"%m/%d/%Y %H:%M:%S");
+    ini_set('fbird.timestampformat',"%m/%d/%Y %H:%M:%S");
 
     for($iter = 0; $iter < 10; $iter++){
     	/* prepare data  */
@@ -49,11 +49,11 @@ InterBase: misc sql types (may take a while)
     	$v_smallint = rand_number(5) % 32767;
     	$v_varchar = rand_str(10000);
 
-    	ibase_query(
+    	fbird_query(
     	"insert into test3 (iter, v_char,v_date,v_decimal4_2, v_decimal4_0, v_decimal7_2, v_decimal7_0,v_numeric15_15, v_numeric15_0,v_double,v_float,v_integer,v_smallint,v_varchar)
     	values ($iter, '$v_char','$v_date',$v_decimal4_2, $v_decimal4_0, $v_decimal7_2, $v_decimal7_0,$v_numeric15_15, $v_numeric15_0,$v_double,$v_float,$v_integer,$v_smallint,'$v_varchar')");
-    	$sel = ibase_query("select * from test3 where iter = $iter");
-    	$row = ibase_fetch_object($sel);
+    	$sel = fbird_query("select * from test3 where iter = $iter");
+    	$row = fbird_fetch_object($sel);
     	if(substr($row->V_CHAR,0,strlen($v_char)) != $v_char){
         	echo " CHAR fail:\n";
             echo " in:  $v_char\n";
@@ -122,15 +122,15 @@ InterBase: misc sql types (may take a while)
             echo " out: $row->V_VARCHAR\n";
         }
 
-        ibase_free_result($sel);
+        fbird_free_result($sel);
     } /* for($iter) */
 
 	/* check for correct handling of duplicate field names */
-	$q = ibase_query('SELECT 1 AS id, 2 AS id, 3 AS id, 4 AS id, 5 AS id, 6 AS id, 7 AS id, 8 AS id, 9 AS id,
+	$q = fbird_query('SELECT 1 AS id, 2 AS id, 3 AS id, 4 AS id, 5 AS id, 6 AS id, 7 AS id, 8 AS id, 9 AS id,
 		10 AS id, 11 AS id, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 FROM rdb$database');
-	var_dump(ibase_fetch_assoc($q));
+	var_dump(fbird_fetch_assoc($q));
 
-    ibase_close();
+    fbird_close();
     echo "end of test\n";
 ?>
 --EXPECT--

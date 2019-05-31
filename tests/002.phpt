@@ -1,27 +1,27 @@
 --TEST--
-InterBase: connect, close and pconnect
+Firebird: connect, close and pconnect
 --SKIPIF--
 <?php include("skipif.inc"); ?>
 --FILE--
 <?php
 
-	require("interbase.inc");
+	require("firebird.inc");
 
-	ibase_connect($test_base);
+	fbird_connect($test_base);
 	out_table("test1");
-	ibase_close();
+	fbird_close();
 
-	$con = ibase_connect($test_base);
-	$pcon1 = ibase_pconnect($test_base);
-	$pcon2 = ibase_pconnect($test_base);
-	ibase_close($con);
+	$con = fbird_connect($test_base);
+	$pcon1 = fbird_pconnect($test_base);
+	$pcon2 = fbird_pconnect($test_base);
+	fbird_close($con);
 	unset($con);
-	ibase_close($pcon1);
+	fbird_close($pcon1);
 	unset($pcon1);
 
 	out_table("test1");
 
-	ibase_close($pcon2);
+	fbird_close($pcon2);
 	unset($pcon2);
 ?>
 --EXPECT--

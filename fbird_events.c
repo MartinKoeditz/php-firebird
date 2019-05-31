@@ -22,33 +22,33 @@
 
 #include "php.h"
 
-#if HAVE_IBASE
+#if HAVE_FBIRD
 
-#include "php_interbase.h"
-#include "php_ibase_includes.h"
+#include "php_firebird.h"
+#include "php_fbird_includes.h"
 
 static int le_event;
 
-static void _php_ibase_event_free(char *event_buf, char *result_buf) /* {{{ */
+static void _php_fbird_event_free(char *event_buf, char *result_buf) /* {{{ */
 {
 	isc_free(event_buf);
 	isc_free(result_buf);
 }
 /* }}} */
 
-void _php_ibase_free_event(ibase_event *event) /* {{{ */
+void _php_fbird_free_event(fbird_event *event) /* {{{ */
 {
 	unsigned short i;
 
 	event->state = DEAD;
 
 	if (event->link != NULL) {
-		ibase_event **node;
+		fbird_event **node;
 
 		zend_list_delete(event->link_res);
 		if (event->link->handle != 0 &&
 				isc_cancel_events(IB_STATUS, &event->link->handle, &event->event_id)) {
-			_php_ibase_error();
+			_php_fbird_error();
 		}
 
 		/* delete this event from the link struct */
@@ -60,7 +60,7 @@ void _php_ibase_free_event(ibase_event *event) /* {{{ */
 		zval_ptr_dtor(&event->callback);
 		ZVAL_UNDEF(&event->callback);
 
-		_php_ibase_event_free(event->event_buffer,event->result_buffer);
+		_php_fbird_event_free(event->event_buffer,event->result_buffer);
 
 		for (i = 0; i < event->event_count; ++i) {
 			if (event->events[i]) {
@@ -72,24 +72,24 @@ void _php_ibase_free_event(ibase_event *event) /* {{{ */
 }
 /* }}} */
 
-static void _php_ibase_free_event_rsrc(zend_resource *rsrc) /* {{{ */
+static void _php_fbird_free_event_rsrc(zend_resource *rsrc) /* {{{ */
 {
-	ibase_event *e = (ibase_event *) rsrc->ptr;
+	fbird_event *e = (fbird_event *) rsrc->ptr;
 
-	_php_ibase_free_event(e);
+	_php_fbird_free_event(e);
 
 	efree(e);
 }
 /* }}} */
 
-void php_ibase_events_minit(INIT_FUNC_ARGS) /* {{{ */
+void php_fbird_events_minit(INIT_FUNC_ARGS) /* {{{ */
 {
-	le_event = zend_register_list_destructors_ex(_php_ibase_free_event_rsrc, NULL,
-	    "interbase event", module_number);
+	le_event = zend_register_list_destructors_ex(_php_fbird_free_event_rsrc, NULL,
+	    "firebird event", module_number);
 }
 /* }}} */
 
-static void _php_ibase_event_block(ibase_db_link *ib_link, unsigned short count, /* {{{ */
+static void _php_fbird_event_block(fbird_db_link *ib_link, unsigned short count, /* {{{ */
 	char **events, unsigned short *l, char **event_buf, char **result_buf)
 {
 	ISC_STATUS dummy_result[20];
@@ -98,7 +98,7 @@ static void _php_ibase_event_block(ibase_db_link *ib_link, unsigned short count,
 	/**
 	 * Unfortunately, there's no clean and portable way in C to pass arguments to
 	 * a variadic function if you don't know the number of arguments at compile time.
-	 * (And even if there were a way, the Interbase API doesn't provide a version of
+	 * (And even if there were a way, the Firebird API doesn't provide a version of
 	 * this function that takes a va_list as an argument)
 	 *
 	 * In this case, the number of arguments is limited to 18 by the underlying API,
@@ -114,7 +114,7 @@ static void _php_ibase_event_block(ibase_db_link *ib_link, unsigned short count,
 	 * This is clearly something that should be fixed, cause the semantics of
 	 * isc_wait_for_event() indicate that it blocks until an event occurs.
 	 * If the Firebird people ever fix this, these lines should be removed,
-	 * otherwise, events will have to fire twice before ibase_wait_event() returns.
+	 * otherwise, events will have to fire twice before fbird_wait_event() returns.
 	 */
 
 	isc_wait_for_event(dummy_result, &ib_link->handle, *l, *event_buf, *result_buf);
@@ -122,12 +122,12 @@ static void _php_ibase_event_block(ibase_db_link *ib_link, unsigned short count,
 }
 /* }}} */
 
-/* {{{ proto string ibase_wait_event([resource link_identifier,] string event [, string event [, ...]])
-   Waits for any one of the passed Interbase events to be posted by the database, and returns its name */
-PHP_FUNCTION(ibase_wait_event)
+/* {{{ proto string fbird_wait_event([resource link_identifier,] string event [, string event [, ...]])
+   Waits for any one of the passed Firebird events to be posted by the database, and returns its name */
+PHP_FUNCTION(fbird_wait_event)
 {
 	zval *args;
-	ibase_db_link *ib_link;
+	fbird_db_link *ib_link;
 	int num_args;
 	char *event_buffer, *result_buffer, *events[15];
 	unsigned short i = 0, event_count = 0, buffer_size;
@@ -145,7 +145,7 @@ PHP_FUNCTION(ibase_wait_event)
 	}
 
 	if (Z_TYPE(args[0]) == IS_RESOURCE) {
-		if ((ib_link = (ibase_db_link *)zend_fetch_resource2_ex(&args[0], "InterBase link", le_link, le_plink)) == NULL) {
+		if ((ib_link = (fbird_db_link *)zend_fetch_resource2_ex(&args[0], "Firebird link", le_link, le_plink)) == NULL) {
 			RETURN_FALSE;
 		}
 		i = 1;
@@ -153,7 +153,7 @@ PHP_FUNCTION(ibase_wait_event)
 		if (ZEND_NUM_ARGS() > 15) {
 			WRONG_PARAM_COUNT;
 		}
-		if ((ib_link = (ibase_db_link *)zend_fetch_resource2(IBG(default_link), "InterBase link", le_link, le_plink)) == NULL) {
+		if ((ib_link = (fbird_db_link *)zend_fetch_resource2(IBG(default_link), "Firebird link", le_link, le_plink)) == NULL) {
 			RETURN_FALSE;
 		}
 	}
@@ -164,12 +164,12 @@ PHP_FUNCTION(ibase_wait_event)
 	}
 
 	/* fills the required data structure with information about the events */
-	_php_ibase_event_block(ib_link, event_count, events, &buffer_size, &event_buffer, &result_buffer);
+	_php_fbird_event_block(ib_link, event_count, events, &buffer_size, &event_buffer, &result_buffer);
 
 	/* now block until an event occurs */
 	if (isc_wait_for_event(IB_STATUS, &ib_link->handle, buffer_size, event_buffer, result_buffer)) {
-		_php_ibase_error();
-		_php_ibase_event_free(event_buffer,result_buffer);
+		_php_fbird_error();
+		_php_fbird_event_free(event_buffer,result_buffer);
 		RETURN_FALSE;
 	}
 
@@ -178,29 +178,29 @@ PHP_FUNCTION(ibase_wait_event)
 	for (i = 0; i < event_count; ++i) {
 		if (occurred_event[i]) {
 			zend_string *result = zend_string_init(events[i], strlen(events[i]), 0);
-			_php_ibase_event_free(event_buffer,result_buffer);
+			_php_fbird_event_free(event_buffer,result_buffer);
 			RETURN_STR(result);
 		}
 	}
 
 	/* If we reach this line, isc_wait_for_event() did return, but we don't know
 	   which event fired. */
-	_php_ibase_event_free(event_buffer,result_buffer);
+	_php_fbird_event_free(event_buffer,result_buffer);
 	RETURN_FALSE;
 }
 /* }}} */
 
 #if FB_API_VER >= 20
 #define PHP_ISC_CALLBACK ISC_EVENT_CALLBACK
-static ISC_EVENT_CALLBACK _php_ibase_callback(ibase_event *event, /* {{{ */
+static ISC_EVENT_CALLBACK _php_fbird_callback(fbird_event *event, /* {{{ */
 	ISC_USHORT buffer_size, ISC_UCHAR *result_buf)
 #else
 #define PHP_ISC_CALLBACK isc_callback
-static isc_callback  _php_ibase_callback(ibase_event *event, /* {{{ */
+static isc_callback  _php_fbird_callback(fbird_event *event, /* {{{ */
 	unsigned short buffer_size, char *result_buf)
 #endif
 {
-	/* this function is called asynchronously by the Interbase client library. */
+	/* this function is called asynchronously by the Firebird client library. */
 	TSRMLS_FETCH_FROM_CTX(event->thread_ctx);
 
 	/**
@@ -234,7 +234,7 @@ static isc_callback  _php_ibase_callback(ibase_event *event, /* {{{ */
 			/* call the callback provided by the user */
 			if (SUCCESS != call_user_function(NULL, NULL,
 					&event->callback, &return_value, 2, args)) {
-				_php_ibase_module_error("Error calling callback %s", Z_STRVAL(event->callback));
+				_php_fbird_module_error("Error calling callback %s", Z_STRVAL(event->callback));
 				break;
 			}
 
@@ -245,9 +245,9 @@ static isc_callback  _php_ibase_callback(ibase_event *event, /* {{{ */
 		case NEW:
 			/* re-register the event */
 			if (isc_que_events(IB_STATUS, &event->link->handle, &event->event_id, buffer_size,
-				event->event_buffer,(PHP_ISC_CALLBACK)_php_ibase_callback, (void *)event)) {
+				event->event_buffer,(PHP_ISC_CALLBACK)_php_fbird_callback, (void *)event)) {
 
-				_php_ibase_error();
+				_php_fbird_error();
 			}
 			event->state = ACTIVE;
 	}
@@ -255,9 +255,9 @@ static isc_callback  _php_ibase_callback(ibase_event *event, /* {{{ */
 }
 /* }}} */
 
-/* {{{ proto resource ibase_set_event_handler([resource link_identifier,] callback handler, string event [, string event [, ...]])
+/* {{{ proto resource fbird_set_event_handler([resource link_identifier,] callback handler, string event [, string event [, ...]])
    Register the callback for handling each of the named events */
-PHP_FUNCTION(ibase_set_event_handler)
+PHP_FUNCTION(fbird_set_event_handler)
 {
 	/**
 	 * The callback passed to this function should take an event name (string) and a
@@ -265,8 +265,8 @@ PHP_FUNCTION(ibase_set_event_handler)
 	 * used to determine if the event handler should remain set.
 	 */
 	zval *args, *cb_arg;
-	ibase_db_link *ib_link;
-	ibase_event *event;
+	fbird_db_link *ib_link;
+	fbird_event *event;
 	unsigned short i = 1, buffer_size;
 	int num_args;
 	zend_resource *link_res;
@@ -294,7 +294,7 @@ PHP_FUNCTION(ibase_set_event_handler)
 		cb_arg = &args[1];
 		i = 2;
 
-		if ((ib_link = (ibase_db_link *)zend_fetch_resource2_ex(&args[0], "InterBase link", le_link, le_plink)) == NULL) {
+		if ((ib_link = (fbird_db_link *)zend_fetch_resource2_ex(&args[0], "Firebird link", le_link, le_plink)) == NULL) {
 			RETURN_FALSE;
 		}
 
@@ -310,7 +310,7 @@ PHP_FUNCTION(ibase_set_event_handler)
 
 		cb_arg = &args[0];
 
-		if ((ib_link = (ibase_db_link *)zend_fetch_resource2(IBG(default_link), "InterBase link", le_link, le_plink)) == NULL) {
+		if ((ib_link = (fbird_db_link *)zend_fetch_resource2(IBG(default_link), "Firebird link", le_link, le_plink)) == NULL) {
 			RETURN_FALSE;
 		}
 		link_res = IBG(default_link);
@@ -319,13 +319,13 @@ PHP_FUNCTION(ibase_set_event_handler)
 	/* get the callback */
 	if (!zend_is_callable(cb_arg, 0, NULL)) {
 		zend_string *cb_name = zend_get_callable_name(cb_arg);
-		_php_ibase_module_error("Callback argument %s is not a callable function", ZSTR_VAL(cb_name));
+		_php_fbird_module_error("Callback argument %s is not a callable function", ZSTR_VAL(cb_name));
 		zend_string_release_ex(cb_name, 0);
 		RETURN_FALSE;
 	}
 
 	/* allocate the event resource */
-	event = (ibase_event *) safe_emalloc(sizeof(ibase_event), 1, 0);
+	event = (fbird_event *) safe_emalloc(sizeof(fbird_event), 1, 0);
 	TSRMLS_SET_CTX(event->thread_ctx);
 	event->link_res = link_res;
 	GC_ADDREF(link_res);
@@ -346,14 +346,14 @@ PHP_FUNCTION(ibase_set_event_handler)
 	}
 
 	/* fills the required data structure with information about the events */
-	_php_ibase_event_block(ib_link, event->event_count, event->events,
+	_php_fbird_event_block(ib_link, event->event_count, event->events,
 		&buffer_size, &event->event_buffer, &event->result_buffer);
 
-	/* now register the events with the Interbase API */
+	/* now register the events with the Firebird API */
 	if (isc_que_events(IB_STATUS, &ib_link->handle, &event->event_id, buffer_size,
-		event->event_buffer,(PHP_ISC_CALLBACK)_php_ibase_callback, (void *)event)) {
+		event->event_buffer,(PHP_ISC_CALLBACK)_php_fbird_callback, (void *)event)) {
 
-		_php_ibase_error();
+		_php_fbird_error();
 		efree(event);
 		RETURN_FALSE;
 	}
@@ -366,18 +366,18 @@ PHP_FUNCTION(ibase_set_event_handler)
 }
 /* }}} */
 
-/* {{{ proto bool ibase_free_event_handler(resource event)
-   Frees the event handler set by ibase_set_event_handler() */
-PHP_FUNCTION(ibase_free_event_handler)
+/* {{{ proto bool fbird_free_event_handler(resource event)
+   Frees the event handler set by fbird_set_event_handler() */
+PHP_FUNCTION(fbird_free_event_handler)
 {
 	zval *event_arg;
 
 	RESET_ERRMSG;
 
 	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS(), "r", &event_arg)) {
-		ibase_event *event;
+		fbird_event *event;
 
-		event = (ibase_event *)zend_fetch_resource_ex(event_arg, "Interbase event", le_event);
+		event = (fbird_event *)zend_fetch_resource_ex(event_arg, "Firebird event", le_event);
 
 		event->state = DEAD;
 
@@ -389,4 +389,4 @@ PHP_FUNCTION(ibase_free_event_handler)
 }
 /* }}} */
 
-#endif /* HAVE_IBASE */
+#endif /* HAVE_FBIRD */

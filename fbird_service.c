@@ -22,26 +22,26 @@
 
 #include "php.h"
 
-#if HAVE_IBASE
+#if HAVE_FBIRD
 
-#include "php_interbase.h"
-#include "php_ibase_includes.h"
+#include "php_firebird.h"
+#include "php_fbird_includes.h"
 
 typedef struct {
 	isc_svc_handle handle;
 	char *hostname;
 	char *username;
 	zend_resource *res;
-} ibase_service;
+} fbird_service;
 
 static int le_service;
 
-static void _php_ibase_free_service(zend_resource *rsrc) /* {{{ */
+static void _php_fbird_free_service(zend_resource *rsrc) /* {{{ */
 {
-	ibase_service *sv = (ibase_service *) rsrc->ptr;
+	fbird_service *sv = (fbird_service *) rsrc->ptr;
 
 	if (isc_service_detach(IB_STATUS, &sv->handle)) {
-		_php_ibase_error();
+		_php_fbird_error();
 	}
 
 	if (sv->hostname) {
@@ -57,81 +57,81 @@ static void _php_ibase_free_service(zend_resource *rsrc) /* {{{ */
 
 /* the svc api seems to get confused after an error has occurred,
    so invalidate the handle on errors */
-#define IBASE_SVC_ERROR(svm) \
-	do { zend_list_delete(svm->res); _php_ibase_error(); } while (0)
+#define FBIRD_SVC_ERROR(svm) \
+	do { zend_list_delete(svm->res); _php_fbird_error(); } while (0)
 
 
-void php_ibase_service_minit(INIT_FUNC_ARGS) /* {{{ */
+void php_fbird_service_minit(INIT_FUNC_ARGS) /* {{{ */
 {
-	le_service = zend_register_list_destructors_ex(_php_ibase_free_service, NULL,
-	    "interbase service manager handle", module_number);
+	le_service = zend_register_list_destructors_ex(_php_fbird_free_service, NULL,
+	    "firebird service manager handle", module_number);
 
 	/* backup options */
-	REGISTER_LONG_CONSTANT("IBASE_BKP_IGNORE_CHECKSUMS", isc_spb_bkp_ignore_checksums, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_BKP_IGNORE_LIMBO", isc_spb_bkp_ignore_limbo, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_BKP_METADATA_ONLY", isc_spb_bkp_metadata_only, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_BKP_NO_GARBAGE_COLLECT", isc_spb_bkp_no_garbage_collect, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_BKP_OLD_DESCRIPTIONS", isc_spb_bkp_old_descriptions, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_BKP_NON_TRANSPORTABLE", isc_spb_bkp_non_transportable, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_BKP_CONVERT", isc_spb_bkp_convert, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_BKP_IGNORE_CHECKSUMS", isc_spb_bkp_ignore_checksums, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_BKP_IGNORE_LIMBO", isc_spb_bkp_ignore_limbo, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_BKP_METADATA_ONLY", isc_spb_bkp_metadata_only, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_BKP_NO_GARBAGE_COLLECT", isc_spb_bkp_no_garbage_collect, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_BKP_OLD_DESCRIPTIONS", isc_spb_bkp_old_descriptions, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_BKP_NON_TRANSPORTABLE", isc_spb_bkp_non_transportable, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_BKP_CONVERT", isc_spb_bkp_convert, CONST_PERSISTENT);
 
 	/* restore options */
-	REGISTER_LONG_CONSTANT("IBASE_RES_DEACTIVATE_IDX", isc_spb_res_deactivate_idx, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_RES_NO_SHADOW", isc_spb_res_no_shadow, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_RES_NO_VALIDITY", isc_spb_res_no_validity, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_RES_ONE_AT_A_TIME", isc_spb_res_one_at_a_time, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_RES_REPLACE", isc_spb_res_replace, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_RES_CREATE", isc_spb_res_create, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_RES_USE_ALL_SPACE", isc_spb_res_use_all_space, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_RES_DEACTIVATE_IDX", isc_spb_res_deactivate_idx, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_RES_NO_SHADOW", isc_spb_res_no_shadow, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_RES_NO_VALIDITY", isc_spb_res_no_validity, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_RES_ONE_AT_A_TIME", isc_spb_res_one_at_a_time, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_RES_REPLACE", isc_spb_res_replace, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_RES_CREATE", isc_spb_res_create, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_RES_USE_ALL_SPACE", isc_spb_res_use_all_space, CONST_PERSISTENT);
 
 	/* manage options */
-	REGISTER_LONG_CONSTANT("IBASE_PRP_PAGE_BUFFERS", isc_spb_prp_page_buffers, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_PRP_SWEEP_INTERVAL", isc_spb_prp_sweep_interval, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_PRP_SHUTDOWN_DB", isc_spb_prp_shutdown_db, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_PRP_DENY_NEW_TRANSACTIONS", isc_spb_prp_deny_new_transactions, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_PRP_DENY_NEW_ATTACHMENTS", isc_spb_prp_deny_new_attachments, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_PRP_RESERVE_SPACE", isc_spb_prp_reserve_space, CONST_PERSISTENT);
-	  REGISTER_LONG_CONSTANT("IBASE_PRP_RES_USE_FULL", isc_spb_prp_res_use_full, CONST_PERSISTENT);
-	  REGISTER_LONG_CONSTANT("IBASE_PRP_RES", isc_spb_prp_res, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_PRP_WRITE_MODE", isc_spb_prp_write_mode, CONST_PERSISTENT);
-	  REGISTER_LONG_CONSTANT("IBASE_PRP_WM_ASYNC", isc_spb_prp_wm_async, CONST_PERSISTENT);
-	  REGISTER_LONG_CONSTANT("IBASE_PRP_WM_SYNC", isc_spb_prp_wm_sync, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_PRP_ACCESS_MODE", isc_spb_prp_access_mode, CONST_PERSISTENT);
-	  REGISTER_LONG_CONSTANT("IBASE_PRP_AM_READONLY", isc_spb_prp_am_readonly, CONST_PERSISTENT);
-	  REGISTER_LONG_CONSTANT("IBASE_PRP_AM_READWRITE", isc_spb_prp_am_readwrite, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_PRP_SET_SQL_DIALECT", isc_spb_prp_set_sql_dialect, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_PRP_ACTIVATE", isc_spb_prp_activate, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_PRP_DB_ONLINE", isc_spb_prp_db_online, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_PRP_PAGE_BUFFERS", isc_spb_prp_page_buffers, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_PRP_SWEEP_INTERVAL", isc_spb_prp_sweep_interval, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_PRP_SHUTDOWN_DB", isc_spb_prp_shutdown_db, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_PRP_DENY_NEW_TRANSACTIONS", isc_spb_prp_deny_new_transactions, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_PRP_DENY_NEW_ATTACHMENTS", isc_spb_prp_deny_new_attachments, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_PRP_RESERVE_SPACE", isc_spb_prp_reserve_space, CONST_PERSISTENT);
+	  REGISTER_LONG_CONSTANT("FBIRD_PRP_RES_USE_FULL", isc_spb_prp_res_use_full, CONST_PERSISTENT);
+	  REGISTER_LONG_CONSTANT("FBIRD_PRP_RES", isc_spb_prp_res, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_PRP_WRITE_MODE", isc_spb_prp_write_mode, CONST_PERSISTENT);
+	  REGISTER_LONG_CONSTANT("FBIRD_PRP_WM_ASYNC", isc_spb_prp_wm_async, CONST_PERSISTENT);
+	  REGISTER_LONG_CONSTANT("FBIRD_PRP_WM_SYNC", isc_spb_prp_wm_sync, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_PRP_ACCESS_MODE", isc_spb_prp_access_mode, CONST_PERSISTENT);
+	  REGISTER_LONG_CONSTANT("FBIRD_PRP_AM_READONLY", isc_spb_prp_am_readonly, CONST_PERSISTENT);
+	  REGISTER_LONG_CONSTANT("FBIRD_PRP_AM_READWRITE", isc_spb_prp_am_readwrite, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_PRP_SET_SQL_DIALECT", isc_spb_prp_set_sql_dialect, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_PRP_ACTIVATE", isc_spb_prp_activate, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_PRP_DB_ONLINE", isc_spb_prp_db_online, CONST_PERSISTENT);
 
 	/* repair options */
-	REGISTER_LONG_CONSTANT("IBASE_RPR_CHECK_DB", isc_spb_rpr_check_db, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_RPR_IGNORE_CHECKSUM", isc_spb_rpr_ignore_checksum, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_RPR_KILL_SHADOWS", isc_spb_rpr_kill_shadows, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_RPR_MEND_DB", isc_spb_rpr_mend_db, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_RPR_VALIDATE_DB", isc_spb_rpr_validate_db, CONST_PERSISTENT);
-	  REGISTER_LONG_CONSTANT("IBASE_RPR_FULL", isc_spb_rpr_full, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_RPR_SWEEP_DB", isc_spb_rpr_sweep_db, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_RPR_CHECK_DB", isc_spb_rpr_check_db, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_RPR_IGNORE_CHECKSUM", isc_spb_rpr_ignore_checksum, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_RPR_KILL_SHADOWS", isc_spb_rpr_kill_shadows, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_RPR_MEND_DB", isc_spb_rpr_mend_db, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_RPR_VALIDATE_DB", isc_spb_rpr_validate_db, CONST_PERSISTENT);
+	  REGISTER_LONG_CONSTANT("FBIRD_RPR_FULL", isc_spb_rpr_full, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_RPR_SWEEP_DB", isc_spb_rpr_sweep_db, CONST_PERSISTENT);
 
 	/* db info arguments */
-	REGISTER_LONG_CONSTANT("IBASE_STS_DATA_PAGES", isc_spb_sts_data_pages, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_STS_DB_LOG", isc_spb_sts_db_log, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_STS_HDR_PAGES", isc_spb_sts_hdr_pages, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_STS_IDX_PAGES", isc_spb_sts_idx_pages, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_STS_SYS_RELATIONS", isc_spb_sts_sys_relations, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_STS_DATA_PAGES", isc_spb_sts_data_pages, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_STS_DB_LOG", isc_spb_sts_db_log, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_STS_HDR_PAGES", isc_spb_sts_hdr_pages, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_STS_IDX_PAGES", isc_spb_sts_idx_pages, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_STS_SYS_RELATIONS", isc_spb_sts_sys_relations, CONST_PERSISTENT);
 
 	/* server info arguments */
-	REGISTER_LONG_CONSTANT("IBASE_SVC_SERVER_VERSION", isc_info_svc_server_version, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_SVC_IMPLEMENTATION", isc_info_svc_implementation, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_SVC_GET_ENV", isc_info_svc_get_env, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_SVC_GET_ENV_LOCK", isc_info_svc_get_env_lock, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_SVC_GET_ENV_MSG", isc_info_svc_get_env_msg, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_SVC_USER_DBPATH", isc_info_svc_user_dbpath, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_SVC_SVR_DB_INFO", isc_info_svc_svr_db_info, CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("IBASE_SVC_GET_USERS", isc_info_svc_get_users, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_SVC_SERVER_VERSION", isc_info_svc_server_version, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_SVC_IMPLEMENTATION", isc_info_svc_implementation, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_SVC_GET_ENV", isc_info_svc_get_env, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_SVC_GET_ENV_LOCK", isc_info_svc_get_env_lock, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_SVC_GET_ENV_MSG", isc_info_svc_get_env_msg, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_SVC_USER_DBPATH", isc_info_svc_user_dbpath, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_SVC_SVR_DB_INFO", isc_info_svc_svr_db_info, CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("FBIRD_SVC_GET_USERS", isc_info_svc_get_users, CONST_PERSISTENT);
 }
 /* }}} */
 
-static void _php_ibase_user(INTERNAL_FUNCTION_PARAMETERS, char operation) /* {{{ */
+static void _php_fbird_user(INTERNAL_FUNCTION_PARAMETERS, char operation) /* {{{ */
 {
 	/* user = 0, password = 1, first_name = 2, middle_name = 3, last_name = 4 */
 	static char const user_flags[] = { isc_spb_sec_username, isc_spb_sec_password,
@@ -140,7 +140,7 @@ static void _php_ibase_user(INTERNAL_FUNCTION_PARAMETERS, char operation) /* {{{
 	int i, args_len[] = { 0, 0, 0, 0, 0 };
 	unsigned short spb_len = 1;
 	zval *res;
-	ibase_service *svm;
+	fbird_service *svm;
 
 	RESET_ERRMSG;
 
@@ -151,7 +151,7 @@ static void _php_ibase_user(INTERNAL_FUNCTION_PARAMETERS, char operation) /* {{{
 		RETURN_FALSE;
 	}
 
-	svm = (ibase_service *)zend_fetch_resource_ex(res, "Interbase service manager handle",
+	svm = (fbird_service *)zend_fetch_resource_ex(res, "Firebird service manager handle",
 		le_service);
 
 	buf[0] = operation;
@@ -162,7 +162,7 @@ static void _php_ibase_user(INTERNAL_FUNCTION_PARAMETERS, char operation) /* {{{
 				user_flags[i], (char)args_len[i], (char)(args_len[i] >> 8), args[i]);
 
 			if ((spb_len + chunk) > sizeof(buf) || chunk <= 0) {
-				_php_ibase_module_error("Internal error: insufficient buffer space for SPB (%d)", spb_len);
+				_php_fbird_module_error("Internal error: insufficient buffer space for SPB (%d)", spb_len);
 				RETURN_FALSE;
 			}
 			spb_len += chunk;
@@ -171,7 +171,7 @@ static void _php_ibase_user(INTERNAL_FUNCTION_PARAMETERS, char operation) /* {{{
 
 	/* now start the job */
 	if (isc_service_start(IB_STATUS, &svm->handle, NULL, spb_len, buf)) {
-		IBASE_SVC_ERROR(svm);
+		FBIRD_SVC_ERROR(svm);
 		RETURN_FALSE;
 	}
 
@@ -179,36 +179,36 @@ static void _php_ibase_user(INTERNAL_FUNCTION_PARAMETERS, char operation) /* {{{
 }
 /* }}} */
 
-/* {{{ proto bool ibase_add_user(resource service_handle, string user_name, string password [, string first_name [, string middle_name [, string last_name]]])
+/* {{{ proto bool fbird_add_user(resource service_handle, string user_name, string password [, string first_name [, string middle_name [, string last_name]]])
    Add a user to security database */
-PHP_FUNCTION(ibase_add_user)
+PHP_FUNCTION(fbird_add_user)
 {
-	_php_ibase_user(INTERNAL_FUNCTION_PARAM_PASSTHRU, isc_action_svc_add_user);
+	_php_fbird_user(INTERNAL_FUNCTION_PARAM_PASSTHRU, isc_action_svc_add_user);
 }
 /* }}} */
 
-/* {{{ proto bool ibase_modify_user(resource service_handle, string user_name, string password [, string first_name [, string middle_name [, string last_name]]])
+/* {{{ proto bool fbird_modify_user(resource service_handle, string user_name, string password [, string first_name [, string middle_name [, string last_name]]])
    Modify a user in security database */
-PHP_FUNCTION(ibase_modify_user)
+PHP_FUNCTION(fbird_modify_user)
 {
-	_php_ibase_user(INTERNAL_FUNCTION_PARAM_PASSTHRU, isc_action_svc_modify_user);
+	_php_fbird_user(INTERNAL_FUNCTION_PARAM_PASSTHRU, isc_action_svc_modify_user);
 }
 /* }}} */
 
-/* {{{ proto bool ibase_delete_user(resource service_handle, string user_name, string password [, string first_name [, string middle_name [, string last_name]]])
+/* {{{ proto bool fbird_delete_user(resource service_handle, string user_name, string password [, string first_name [, string middle_name [, string last_name]]])
    Delete a user from security database */
-PHP_FUNCTION(ibase_delete_user)
+PHP_FUNCTION(fbird_delete_user)
 {
-	_php_ibase_user(INTERNAL_FUNCTION_PARAM_PASSTHRU, isc_action_svc_delete_user);
+	_php_fbird_user(INTERNAL_FUNCTION_PARAM_PASSTHRU, isc_action_svc_delete_user);
 }
 /* }}} */
 
-/* {{{ proto resource ibase_service_attach(string host, string dba_username, string dba_password)
+/* {{{ proto resource fbird_service_attach(string host, string dba_username, string dba_password)
    Connect to the service manager */
-PHP_FUNCTION(ibase_service_attach)
+PHP_FUNCTION(fbird_service_attach)
 {
 	size_t hlen, ulen, plen, spb_len;
-	ibase_service *svm;
+	fbird_service *svm;
 	char buf[128], *host, *user, *pass, *loc;
 	isc_svc_handle handle = 0;
 
@@ -226,7 +226,7 @@ PHP_FUNCTION(ibase_service_attach)
 		user, isc_spb_password, (char)plen, pass, host);
 
 	if (spb_len > sizeof(buf) || spb_len == -1) {
-		_php_ibase_module_error("Internal error: insufficient buffer space for SPB (%zd)", spb_len);
+		_php_fbird_module_error("Internal error: insufficient buffer space for SPB (%zd)", spb_len);
 		RETURN_FALSE;
 	}
 
@@ -235,11 +235,11 @@ PHP_FUNCTION(ibase_service_attach)
 
 	/* attach to the service manager */
 	if (isc_service_attach(IB_STATUS, 0, loc, &handle, (unsigned short)spb_len, buf)) {
-		_php_ibase_error();
+		_php_fbird_error();
 		RETURN_FALSE;
 	}
 
-	svm = (ibase_service*)emalloc(sizeof(ibase_service));
+	svm = (fbird_service*)emalloc(sizeof(fbird_service));
 	svm->handle = handle;
 	svm->hostname = estrdup(host);
 	svm->username = estrdup(user);
@@ -250,9 +250,9 @@ PHP_FUNCTION(ibase_service_attach)
 }
 /* }}} */
 
-/* {{{ proto bool ibase_service_detach(resource service_handle)
+/* {{{ proto bool fbird_service_detach(resource service_handle)
    Disconnect from the service manager */
-PHP_FUNCTION(ibase_service_detach)
+PHP_FUNCTION(fbird_service_detach)
 {
 	zval *res;
 
@@ -268,8 +268,8 @@ PHP_FUNCTION(ibase_service_detach)
 }
 /* }}} */
 
-static void _php_ibase_service_query(INTERNAL_FUNCTION_PARAMETERS, /* {{{ */
-	ibase_service *svm, char info_action)
+static void _php_fbird_service_query(INTERNAL_FUNCTION_PARAMETERS, /* {{{ */
+	fbird_service *svm, char info_action)
 {
 	static char spb[] = { isc_info_svc_timeout, 10, 0, 0, 0 };
 
@@ -281,7 +281,7 @@ static void _php_ibase_service_query(INTERNAL_FUNCTION_PARAMETERS, /* {{{ */
 		static char action[] = { isc_action_svc_display_user };
 
 		if (isc_service_start(IB_STATUS, &svm->handle, NULL, sizeof(action), action)) {
-			IBASE_SVC_ERROR(svm);
+			FBIRD_SVC_ERROR(svm);
 			RETURN_FALSE;
 		}
 	}
@@ -292,7 +292,7 @@ query_loop:
 	if (isc_service_query(IB_STATUS, &svm->handle, NULL, sizeof(spb), spb,
 			1, &info_action, sizeof(res_buf), res_buf)) {
 
-		IBASE_SVC_ERROR(svm);
+		FBIRD_SVC_ERROR(svm);
 		RETURN_FALSE;
 	}
 	while (*result != isc_info_end) {
@@ -414,7 +414,7 @@ query_loop:
 }
 /* }}} */
 
-static void _php_ibase_backup_restore(INTERNAL_FUNCTION_PARAMETERS, char operation) /* {{{ */
+static void _php_fbird_backup_restore(INTERNAL_FUNCTION_PARAMETERS, char operation) /* {{{ */
 {
 	/**
 	 * It appears that the service API is a little bit confused about which flag
@@ -427,7 +427,7 @@ static void _php_ibase_backup_restore(INTERNAL_FUNCTION_PARAMETERS, char operati
 	size_t dblen, bklen, spb_len;
 	zend_long opts = 0;
 	zend_bool verbose = 0;
-	ibase_service *svm;
+	fbird_service *svm;
 
 	RESET_ERRMSG;
 
@@ -436,8 +436,8 @@ static void _php_ibase_backup_restore(INTERNAL_FUNCTION_PARAMETERS, char operati
 		RETURN_FALSE;
 	}
 
-	svm = (ibase_service *)zend_fetch_resource_ex(res,
-		"Interbase service manager handle", le_service);
+	svm = (fbird_service *)zend_fetch_resource_ex(res,
+		"Firebird service manager handle", le_service);
 
 	/* fill the param buffer */
 	spb_len = slprintf(buf, sizeof(buf), "%c%c%c%c%s%c%c%c%s%c%c%c%c%c",
@@ -450,48 +450,48 @@ static void _php_ibase_backup_restore(INTERNAL_FUNCTION_PARAMETERS, char operati
 	}
 
 	if (spb_len > sizeof(buf) || spb_len <= 0) {
-		_php_ibase_module_error("Internal error: insufficient buffer space for SPB (%zd)", spb_len);
+		_php_fbird_module_error("Internal error: insufficient buffer space for SPB (%zd)", spb_len);
 		RETURN_FALSE;
 	}
 
 	/* now start the backup/restore job */
 	if (isc_service_start(IB_STATUS, &svm->handle, NULL, (unsigned short)spb_len, buf)) {
-		IBASE_SVC_ERROR(svm);
+		FBIRD_SVC_ERROR(svm);
 		RETURN_FALSE;
 	}
 
 	if (!verbose) {
 		RETURN_TRUE;
 	} else {
-		_php_ibase_service_query(INTERNAL_FUNCTION_PARAM_PASSTHRU, svm, isc_info_svc_line);
+		_php_fbird_service_query(INTERNAL_FUNCTION_PARAM_PASSTHRU, svm, isc_info_svc_line);
 	}
 }
 /* }}} */
 
-/* {{{ proto mixed ibase_backup(resource service_handle, string source_db, string dest_file [, int options [, bool verbose]])
+/* {{{ proto mixed fbird_backup(resource service_handle, string source_db, string dest_file [, int options [, bool verbose]])
    Initiates a backup task in the service manager and returns immediately */
-PHP_FUNCTION(ibase_backup)
+PHP_FUNCTION(fbird_backup)
 {
-	_php_ibase_backup_restore(INTERNAL_FUNCTION_PARAM_PASSTHRU, isc_action_svc_backup);
+	_php_fbird_backup_restore(INTERNAL_FUNCTION_PARAM_PASSTHRU, isc_action_svc_backup);
 }
 /* }}} */
 
-/* {{{ proto mixed ibase_restore(resource service_handle, string source_file, string dest_db [, int options [, bool verbose]])
+/* {{{ proto mixed fbird_restore(resource service_handle, string source_file, string dest_db [, int options [, bool verbose]])
    Initiates a restore task in the service manager and returns immediately */
-PHP_FUNCTION(ibase_restore)
+PHP_FUNCTION(fbird_restore)
 {
-	_php_ibase_backup_restore(INTERNAL_FUNCTION_PARAM_PASSTHRU, isc_action_svc_restore);
+	_php_fbird_backup_restore(INTERNAL_FUNCTION_PARAM_PASSTHRU, isc_action_svc_restore);
 }
 /* }}} */
 
-static void _php_ibase_service_action(INTERNAL_FUNCTION_PARAMETERS, char svc_action) /* {{{ */
+static void _php_fbird_service_action(INTERNAL_FUNCTION_PARAMETERS, char svc_action) /* {{{ */
 {
 	zval *res;
 	char buf[128], *db;
 	size_t dblen;
 	int spb_len;
 	zend_long action, argument = 0;
-	ibase_service *svm;
+	fbird_service *svm;
 
 	RESET_ERRMSG;
 
@@ -500,8 +500,8 @@ static void _php_ibase_service_action(INTERNAL_FUNCTION_PARAMETERS, char svc_act
 		RETURN_FALSE;
 	}
 
-	svm = (ibase_service *)zend_fetch_resource_ex(res,
-		"Interbase service manager handle", le_service);
+	svm = (fbird_service *)zend_fetch_resource_ex(res,
+		"Firebird service manager handle", le_service);
 
 	if (svc_action == isc_action_svc_db_stats) {
 		switch (action) {
@@ -520,7 +520,7 @@ static void _php_ibase_service_action(INTERNAL_FUNCTION_PARAMETERS, char svc_act
 		switch (action) {
 			default:
 unknown_option:
-				_php_ibase_module_error("Unrecognised option (" ZEND_LONG_FMT ")", action);
+				_php_fbird_module_error("Unrecognised option (" ZEND_LONG_FMT ")", action);
 				RETURN_FALSE;
 
 			case isc_spb_rpr_check_db:
@@ -559,46 +559,46 @@ options_argument:
 	}
 
 	if (spb_len > sizeof(buf) || spb_len == -1) {
-		_php_ibase_module_error("Internal error: insufficient buffer space for SPB (%d)", spb_len);
+		_php_fbird_module_error("Internal error: insufficient buffer space for SPB (%d)", spb_len);
 		RETURN_FALSE;
 	}
 
 	if (isc_service_start(IB_STATUS, &svm->handle, NULL, (unsigned short)spb_len, buf)) {
-		IBASE_SVC_ERROR(svm);
+		FBIRD_SVC_ERROR(svm);
 		RETURN_FALSE;
 	}
 
 	if (svc_action == isc_action_svc_db_stats) {
-		_php_ibase_service_query(INTERNAL_FUNCTION_PARAM_PASSTHRU, svm, isc_info_svc_line);
+		_php_fbird_service_query(INTERNAL_FUNCTION_PARAM_PASSTHRU, svm, isc_info_svc_line);
 	} else {
 		RETURN_TRUE;
 	}
 }
 /* }}} */
 
-/* {{{ proto bool ibase_maintain_db(resource service_handle, string db, int action [, int argument])
+/* {{{ proto bool fbird_maintain_db(resource service_handle, string db, int action [, int argument])
    Execute a maintenance command on the database server */
-PHP_FUNCTION(ibase_maintain_db)
+PHP_FUNCTION(fbird_maintain_db)
 {
-	_php_ibase_service_action(INTERNAL_FUNCTION_PARAM_PASSTHRU, isc_action_svc_properties);
+	_php_fbird_service_action(INTERNAL_FUNCTION_PARAM_PASSTHRU, isc_action_svc_properties);
 }
 /* }}} */
 
-/* {{{ proto string ibase_db_info(resource service_handle, string db, int action [, int argument])
+/* {{{ proto string fbird_db_info(resource service_handle, string db, int action [, int argument])
    Request statistics about a database */
-PHP_FUNCTION(ibase_db_info)
+PHP_FUNCTION(fbird_db_info)
 {
-	_php_ibase_service_action(INTERNAL_FUNCTION_PARAM_PASSTHRU, isc_action_svc_db_stats);
+	_php_fbird_service_action(INTERNAL_FUNCTION_PARAM_PASSTHRU, isc_action_svc_db_stats);
 }
 /* }}} */
 
-/* {{{ proto string ibase_server_info(resource service_handle, int action)
+/* {{{ proto string fbird_server_info(resource service_handle, int action)
    Request information about a database server */
-PHP_FUNCTION(ibase_server_info)
+PHP_FUNCTION(fbird_server_info)
 {
 	zval *res;
 	zend_long action;
-	ibase_service *svm;
+	fbird_service *svm;
 
 	RESET_ERRMSG;
 
@@ -606,15 +606,15 @@ PHP_FUNCTION(ibase_server_info)
 		RETURN_FALSE;
 	}
 
-	svm = (ibase_service *)zend_fetch_resource_ex(res,
-		"Interbase service manager handle", le_service);
+	svm = (fbird_service *)zend_fetch_resource_ex(res,
+		"Firebird service manager handle", le_service);
 
-	_php_ibase_service_query(INTERNAL_FUNCTION_PARAM_PASSTHRU, svm, (char)action);
+	_php_fbird_service_query(INTERNAL_FUNCTION_PARAM_PASSTHRU, svm, (char)action);
 }
 /* }}} */
 
 #else
 
-void php_ibase_register_service_constants(INIT_FUNC_ARGS) { /* nop */ }
+void php_fbird_register_service_constants(INIT_FUNC_ARGS) { /* nop */ }
 
-#endif /* HAVE_IBASE */
+#endif /* HAVE_FBIRD */
